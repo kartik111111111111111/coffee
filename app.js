@@ -62,11 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
     '22 minutes, one vinyl side',
     '72 hours rest',
     'Tracing back to a tree',
-    'Chikmagalur morning',
+    'Morning in the hills',
     'Remembered forever',
     'Jackfruit smoke',
     'Twelve seats, no laptops',
-    'Pune, FC Road, lane 4'
+    'By invitation only'
   ];
   let lineIdx = 0;
   function rndLine(){ lineIdx = (lineIdx+1)%lines.length; return lines[lineIdx]; }
