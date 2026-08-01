@@ -1,4 +1,4 @@
-/* EMBER COFFEE — Fixed video + blob preload = totally loaded before play, scrub within next section */
+/* EMBER — final: loader shows % + random text only, waits for total load, fixed-video scrub */
 document.addEventListener('DOMContentLoaded', () => {
   const $ = (s) => document.querySelector(s);
   const log = (...a) => console.log('[EMBER]', ...a);
@@ -12,339 +12,268 @@ document.addEventListener('DOMContentLoaded', () => {
   const nav = $('#nav');
   const navProgressBar = $('#nav-progress-bar');
   const heroTrack = $('#hero-track');
-  const heroStage = $('#hero-stage');
-  const grain = $('#grain');
-  const cursorLight = $('#cursor-light');
-  const pageLight = $('#page-light');
-  const menuToggle = $('#menu-toggle');
-  const mobileMenu = $('#mobile-menu');
 
-  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
-    log('GSAP missing');
-    setTimeout(()=>location.reload(), 1200);
+  if (!window.gsap || !window.ScrollTrigger) {
+    location.reload();
     return;
   }
   gsap.registerPlugin(ScrollTrigger);
 
-  // Lenis — start stopped until video totally loaded
+  // Lenis
   let lenis = null;
   try {
-    const Ctor = window.Lenis;
-    if (Ctor) {
-      lenis = new Ctor({
-        duration: 1.12,
+    if (window.Lenis) {
+      lenis = new Lenis({
+        duration: 1.1,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
-        smoothTouch: false,
-        touchMultiplier: 1.5,
-        orientation: 'vertical',
+        touchMultiplier: 1.4,
       });
       lenis.on('scroll', ScrollTrigger.update);
       gsap.ticker.add((t) => lenis.raf(t*1000));
       gsap.ticker.lagSmoothing(0);
       lenis.stop();
     }
-  } catch (e) { log('Lenis fail', e); }
+  } catch {}
 
-  // cursor light independent
-  let mx = innerWidth/2, my = innerHeight/2, cx=mx, cy=my, cActive=false;
-  addEventListener('mousemove', (e)=>{ mx=e.clientX; my=e.clientY; if(!cActive){ cActive=true; gsap.to(cursorLight,{opacity:1,duration:0.5}); } }, {passive:true});
-  (function curLoop(){ cx+=(mx-cx)*0.08; cy+=(my-cy)*0.08; if(cursorLight) cursorLight.style.transform=`translate3d(${cx}px,${cy}px,0) translate(-50%,-50%)`; if(pageLight){ const px=(cx/innerWidth-0.5)*28; const py=(cy/innerHeight-0.5)*22; pageLight.style.transform=`translate3d(${px}px,${py}px,0)`; } requestAnimationFrame(curLoop); })();
+  // cursor light
+  const cursorLight = $('#cursor-light');
+  const pageLight = $('#page-light');
+  let mx = innerWidth/2, my = innerHeight/2, cx=mx, cy=my, cOn=false;
+  addEventListener('mousemove', (e)=>{ mx=e.clientX; my=e.clientY; if(!cOn){ cOn=true; gsap.to(cursorLight,{opacity:1,duration:0.5}); } }, {passive:true});
+  (function lp(){ cx+=(mx-cx)*0.08; cy+=(my-cy)*0.08; if(cursorLight) cursorLight.style.transform=`translate3d(${cx}px,${cy}px,0) translate(-50%,-50%)`; if(pageLight){ pageLight.style.transform=`translate3d(${(cx/innerWidth-0.5)*26}px,${(cy/innerHeight-0.5)*18}px,0)`; } requestAnimationFrame(lp); })();
 
   // menu
+  const menuToggle = $('#menu-toggle');
+  const mobileMenu = $('#mobile-menu');
   if (menuToggle) {
     menuToggle.addEventListener('click', ()=>{
       const open = mobileMenu.classList.contains('open');
       mobileMenu.classList.toggle('open', !open);
       if (lenis) { if(!open) lenis.stop(); else if(loaderDone) lenis.start(); }
-      gsap.to(menuToggle.children,{rotate:i=>open?0:(i===0?45:-45), y:i=>open?0:(i===0?3:-3), duration:0.4, ease:'power3.inOut'});
     });
     mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{ mobileMenu.classList.remove('open'); if(lenis && loaderDone) lenis.start(); }));
   }
 
-  // ===== LOADER: BLOB PRELOAD = TOTALLY LOADED =====
-  let loaderDone = false;
-  let videoDuration = 10; // fallback
-  let videoBlobUrl = null;
-  let fullyLoaded = false;
+  // Loader texts — only % + random editorial, no technical words
+  const randomLines = [
+    'Wood stacked at dawn',
+    'Listening for first crack',
+    'Ember, not flame',
+    '6kg small batch',
+    '22 minutes, one vinyl side',
+    '72 hours rest',
+    'Tracing back to a tree',
+    'Chikmagalur morning',
+    'Remembered forever',
+    'Jackfruit smoke',
+    'Pune, FC Road, lane 4',
+    'Twelve seats, no laptops'
+  ];
+  let phraseIdx = 0;
+  function randomPhrase(){ phraseIdx = (phraseIdx + 1) % randomLines.length; return randomLines[phraseIdx]; }
 
-  function setLoader(pct, msg){
+  let loaderDone = false;
+  let fullyLoaded = false;
+  let videoDuration = 10;
+
+  function setLoader(pct){
     const c = Math.max(0, Math.min(1, pct));
     if(loaderBar) loaderBar.style.width = `${c*100}%`;
     if(loaderPct) loaderPct.textContent = `${String(Math.floor(c*100)).padStart(2,'0')}%`;
-    if(msg && loaderMsg) loaderMsg.textContent = msg;
   }
+
   function hideLoader(){
     if(loaderDone || !fullyLoaded) return;
     loaderDone = true;
-    setLoader(1, 'READY');
-    gsap.to(loader,{opacity:0, duration:0.7, ease:'power3.inOut', onComplete:()=>{ loader.classList.add('hidden'); ScrollTrigger.refresh(); }});
-    gsap.fromTo('#hero-stage .hero-content',{opacity:0},{opacity:1,duration:0.9,ease:'power2.out',delay:0.12});
+    setLoader(1);
+    if(loaderMsg) loaderMsg.textContent = randomLines[8];
+    gsap.to(loader, {opacity:0, duration:0.7, ease:'power3.inOut', onComplete:()=>{ loader.classList.add('hidden'); ScrollTrigger.refresh(); }});
+    gsap.fromTo('#hero-stage .hero-content',{opacity:0},{opacity:1, duration:0.8, delay:0.1});
     if(lenis) lenis.start();
-    // ensure first frame
-    if(video){ try{ video.pause(); if(video.readyState>=1) video.currentTime=0.001; }catch{} }
-    log('Loader hidden, video totally loaded, blob url:', videoBlobUrl ? 'yes' : 'no');
+    if(video){ try{ video.pause(); video.currentTime = 0.001; }catch{} }
   }
 
-  async function preloadVideoBlob(){
-    const localSrc = './coffeebackground.mp4';
-    const fallbackSrc = 'https://videos.pexels.com/video-files/29068399/12556689_1920_1080_30fps.mp4';
-    let srcToTry = localSrc;
+  // rotate random text every 420ms until loaded
+  let phraseInt = setInterval(()=>{
+    if(!loaderDone && loaderMsg) loaderMsg.textContent = randomPhrase();
+  }, 420);
+  if(loaderMsg) loaderMsg.textContent = randomLines[0];
 
-    async function fetchWithProgress(url){
-      log('Fetching', url);
-      setLoader(0.03, 'FETCHING HERO');
-      const res = await fetch(url, {cache:'force-cache'});
-      if(!res.ok) throw new Error(`HTTP ${res.status}`);
-      const contentLength = parseInt(res.headers.get('Content-Length')||'0',10);
-      const reader = res.body.getReader();
-      let received = 0;
-      const chunks = [];
-      while(true){
-        const {done, value} = await reader.read();
-        if(done) break;
-        chunks.push(value);
-        received += value.length;
-        if(contentLength){
-          const pct = received / contentLength;
-          // map fetch 0-1 to loader 0.08-0.92
-          setLoader(0.08 + pct*0.84, `DOWNLOADING • ${Math.floor(pct*100)}% • ${(received/1024/1024).toFixed(2)}MB`);
+  // VIDEO — wait for totally loaded (buffered 100%)
+  if(video){
+    video.autoplay = false;
+    video.loop = false;
+    video.muted = true;
+    video.setAttribute('playsinline','');
+    video.preload = 'auto';
+    setLoader(0.02);
+
+    video.addEventListener('loadedmetadata', ()=>{
+      if(video.duration && !isNaN(video.duration)) videoDuration = video.duration;
+      log('metadata', videoDuration);
+    });
+
+    const check = ()=>{
+      if(fullyLoaded) return;
+      try{
+        let pct = 0;
+        if(video.buffered && video.buffered.length){
+          const end = video.buffered.end(video.buffered.length-1);
+          const dur = video.duration || videoDuration || 10;
+          pct = dur ? end/dur : 0;
         } else {
-          setLoader(Math.min(0.92, 0.08 + received/ (3*1024*1024)), `DOWNLOADING • ${(received/1024/1024).toFixed(2)}MB`);
+          // if no buffered info, use readyState as proxy
+          if(video.readyState>=4) pct = 1;
+          else if(video.readyState>=3) pct = 0.85;
         }
-      }
-      const blob = new Blob(chunks, {type: res.headers.get('Content-Type')||'video/mp4'});
-      return blob;
-    }
+        // avoid going backwards
+        const cur = parseFloat(loaderBar?.style.width)||0;
+        const vis = Math.max(pct, cur/100);
+        setLoader(Math.min(0.99, vis));
 
-    try{
-      let blob;
-      try{
-        blob = await fetchWithProgress(srcToTry);
-      }catch(e){
-        log('Local fetch failed', e.message, 'trying fallback remote');
-        setLoader(0.12, 'LOCAL NOT CACHED — REMOTE PREVIEW');
-        srcToTry = fallbackSrc;
-        blob = await fetchWithProgress(srcToTry);
-      }
-
-      setLoader(0.93, 'DECODING');
-      videoBlobUrl = URL.createObjectURL(blob);
-      video.src = videoBlobUrl;
-      video.load();
-      // wait for metadata + canplaythrough
-      await new Promise((resolve, reject)=>{
-        let resolved = false;
-        const onMeta = ()=>{
-          if(video.duration && !isNaN(video.duration)) videoDuration = video.duration;
-          log('blob metadata', videoDuration);
-          try{ video.currentTime = 0.001; }catch{}
-        };
-        const onCanPlayThrough = ()=>{
-          if(resolved) return;
-          resolved = true;
-          cleanup();
-          resolve();
-        };
-        const onError = (ev)=>{
-          cleanup();
-          reject(ev);
-        };
-        const cleanup = ()=>{
-          video.removeEventListener('loadedmetadata', onMeta);
-          video.removeEventListener('canplaythrough', onCanPlayThrough);
-          video.removeEventListener('error', onError);
-        };
-        video.addEventListener('loadedmetadata', onMeta);
-        video.addEventListener('canplaythrough', onCanPlayThrough, {once:true});
-        video.addEventListener('error', onError, {once:true});
-        // safety timeout for canplaythrough — if not firing, use canplay
-        setTimeout(()=>{
-          if(!resolved && video.readyState>=3){
-            log('canplaythrough timeout, using readyState', video.readyState);
-            resolved = true;
-            cleanup();
-            resolve();
+        // totally loaded when buffered >= 99% and readyState 4
+        if(video.readyState >= 4){
+          const dur = video.duration || videoDuration;
+          const buffered = video.buffered.length ? video.buffered.end(video.buffered.length-1) : dur;
+          const bp = dur ? buffered/dur : 0;
+          if(bp >= 0.99 || (video.buffered.length===0 && video.readyState>=4)){
+            if(video.duration) videoDuration = video.duration;
+            fullyLoaded = true;
+            video.classList.add('is-ready');
+            if(videoFallback) videoFallback.classList.add('is-hidden');
+            clearInterval(phraseInt);
+            setLoader(1);
+            log('totally loaded', videoDuration, bp);
+            setTimeout(hideLoader, 300);
           }
-        }, 2500);
-      });
+        }
+      }catch(e){ log('check err', e); }
+    };
 
-      video.classList.add('is-ready');
-      if(videoFallback) videoFallback.classList.add('is-hidden');
-      fullyLoaded = true;
-      setLoader(0.99, 'PREPARED');
-      setTimeout(hideLoader, 320);
-
-    }catch(err){
-      log('Blob preload failed', err);
-      // fallback to letting video element load normally (still better than broken)
-      setLoader(0.88, 'FALLBACK DIRECT LOAD');
-      try{
-        video.src = srcToTry;
+    video.addEventListener('progress', check);
+    video.addEventListener('canplay', check);
+    video.addEventListener('canplaythrough', ()=>{
+      // canplaythrough is close to totally loaded, do final check
+      setLoader(0.92);
+      check();
+      // if browser never buffers 100% till play, force after short delay if readyState 4
+      setTimeout(()=>{ if(video.readyState>=4){ fullyLoaded=true; video.classList.add('is-ready'); if(videoFallback) videoFallback.classList.add('is-hidden'); setLoader(1); hideLoader(); } }, 600);
+    });
+    video.addEventListener('error', ()=>{
+      log('video error, trying fallback');
+      // fallback remote — still show only % + random text
+      const fallback = 'https://videos.pexels.com/video-files/29068399/12556689_1920_1080_30fps.mp4';
+      if(video.src !== fallback){
+        video.src = fallback;
         video.load();
-        video.addEventListener('canplaythrough', ()=>{
-          fullyLoaded = true;
-          video.classList.add('is-ready');
-          if(videoFallback) videoFallback.classList.add('is-hidden');
-          setLoader(1,'READY (DIRECT)');
-          setTimeout(hideLoader, 350);
-        }, {once:true});
-      }catch{
-        // ultimate gradient fallback
-        setLoader(1,'GRADIENT FALLBACK');
+      } else {
+        // even fallback failed, allow entry with gradient
         fullyLoaded = true;
-        setTimeout(hideLoader, 400);
-      }
-    }
-  }
-
-  // start blob preload
-  preloadVideoBlob();
-
-  // ===== SCROLL SCRUB =====
-  // Make video fixed, so it plays "within next section" as final frame lingering
-  // Hero track is 280vh scroll driver
-  let targetP = 0;
-  let smoothP = 0;
-  let vidTime = 0;
-  let heroVisible = true;
-
-  function initScrub(){
-    // driver
-    ScrollTrigger.create({
-      trigger: heroTrack,
-      start: 'top top',
-      end: 'bottom bottom',
-      scrub: false,
-      onUpdate: (self)=>{
-        targetP = self.progress; // 0..1 across 280vh
-        heroVisible = self.progress < 0.999;
+        setLoader(1);
+        hideLoader();
       }
     });
 
-    // overall nav progress
+    video.load();
+    // poll
+    setInterval(check, 180);
+  } else {
+    fullyLoaded = true;
+    hideLoader();
+  }
+
+  // ===== SCROLL SCRUB — FIXED VIDEO, USABLE =====
+  let targetP = 0, smoothP = 0, vTime = 0;
+
+  function initScrub(){
+    ScrollTrigger.create({
+      trigger: heroTrack,
+      start: 'top top',
+      end: 'bottom top', // full 280vh driver
+      onUpdate: (s)=>{ targetP = s.progress; }
+    });
+
     ScrollTrigger.create({
       trigger: document.body,
       start: 'top top',
       end: 'bottom bottom',
-      onUpdate: (self)=>{
-        if(navProgressBar) navProgressBar.style.width = `${self.progress*100}%`;
-        if(self.progress>0.02) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
+      onUpdate: (s)=>{
+        if(navProgressBar) navProgressBar.style.width = `${s.progress*100}%`;
+        if(s.progress>0.02) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
       }
     });
 
-    // Fade video into next section — keep final frame visible for 40vh into Story
+    // fade final frame into next section
     ScrollTrigger.create({
       trigger: '#story',
-      start: 'top 90%',
-      end: 'top 10%',
+      start: 'top 92%',
+      end: 'top 15%',
       scrub: true,
-      onUpdate: (self)=>{
-        // as story enters, keep video at 100% time but reduce brightness/opacity slightly
-        const p = self.progress; // 0 when story bottom enters, 1 when top hits
+      onUpdate: (s)=>{
         if(video){
-          const opacity = 1 - p*0.65; // linger final frame within next section
-          video.style.opacity = `${opacity}`;
-          if(videoFallback) videoFallback.style.opacity = `${opacity*0.4}`;
+          const op = 1 - s.progress*0.7;
+          video.style.opacity = op;
+          if(videoFallback) videoFallback.style.opacity = op*0.35;
         }
-        // tint wash
-        const wash = document.getElementById('hero-wash');
-        if(wash) wash.style.opacity = `${0.6 - p*0.6}`;
       }
     });
 
-    // render loop — direct mapping for ultra responsive scrub (no double lag)
     let last = performance.now();
-    function frame(){
+    function tick(){
       const now = performance.now();
       const dt = Math.min(33, now-last)/16.666;
       last = now;
-
-      // ease only a little for smoothness, but very responsive (0.22)
-      const ease = 0.22;
-      smoothP += (targetP - smoothP) * (1 - Math.pow(1 - ease, dt));
+      smoothP += (targetP - smoothP) * (1 - Math.pow(1 - 0.20, dt)); // responsive, not laggy
       smoothP = Math.max(0, Math.min(1, smoothP));
-
-      // direct video time — no second smoothing layer, so it feels 1:1 with scroll and reversible instantly
-      vidTime = smoothP * videoDuration;
+      vTime = smoothP * videoDuration;
 
       if(video && fullyLoaded && video.readyState>=1){
-        const diff = Math.abs(video.currentTime - vidTime);
-        if(diff > 0.001){
-          // direct assignment for perfect Apple-like scrub; fastSeek for large jumps
-          if(diff>0.4 && 'fastSeek' in video){
-            try{ video.fastSeek(vidTime); }catch{ video.currentTime = vidTime; }
-          } else {
-            video.currentTime = vidTime;
-          }
+        if(Math.abs(video.currentTime - vTime) > 0.002){
+          // direct 1:1 scrub, seamless reverse
+          video.currentTime = vTime;
         }
         if(!video.paused){ try{ video.pause(); }catch{} }
       }
 
-      syncUI(smoothP);
-      requestAnimationFrame(frame);
+      // UI sync
+      const map = (a,b)=> Math.max(0, Math.min(1, (smoothP-a)/(b-a)));
+      const g = (id)=>document.getElementById(id);
+      const l1=g('h-l1'), l2=g('h-l2'), l3=g('h-l3');
+      if(l1){ const m=map(0,0.32); gsap.set(l1,{y:-m*80,scale:1-m*0.07,opacity:1-m,filter:`blur(${m*5}px)`}); }
+      if(l2){ const m=map(0.12,0.50); gsap.set(l2,{y:-m*100,scale:1-m*0.08,opacity:1-m,filter:`blur(${m*7}px)`}); }
+      if(l3){ const m=map(0.22,0.62); gsap.set(l3,{y:-m*120,x:-m*16,scale:1-m*0.06,opacity:1-m,filter:`blur(${m*5}px)`}); }
+      const ey=g('h-eyebrow'), ki=g('h-kicker'), cp=g('h-copy'), ca=g('h-cta'), me=g('h-meta'), sc=g('h-scroll');
+      if(ey) gsap.set(ey,{opacity:1-map(0,0.22)*1.2,y:-map(0,0.22)*18});
+      if(ki) gsap.set(ki,{opacity:1-map(0.02,0.28),y:-map(0.02,0.28)*14});
+      if(cp) gsap.set(cp,{opacity:1-map(0.35,0.68),y:-map(0.35,0.68)*36});
+      if(ca){ const m=map(0.42,0.70); gsap.set(ca,{opacity:1-m,y:-m*28,filter:`blur(${m*3}px)`}); const r=ca.querySelector('.cta-reflect'); if(r) r.style.transform=`translateX(${-80+smoothP*160}%) skewX(-18deg)`; }
+      if(me) gsap.set(me,{opacity:1-map(0.5,0.78),y:-map(0.5,0.78)*26});
+      if(sc) gsap.set(sc,{opacity:1-map(0,0.18)*2});
+      if(video){ gsap.set(video,{scale:1.06+smoothP*0.10}); }
+      const grainEl = document.getElementById('grain'); if(grainEl) grainEl.style.opacity=(0.032+smoothP*0.05).toFixed(3);
+      if(smoothP>0.70) nav.classList.add('compressed'); else nav.classList.remove('compressed');
+      const mp=g('meta-progress'), mt=g('meta-time'), mtmp=g('meta-temp');
+      if(mp) mp.textContent=`${(smoothP*100).toFixed(1).padStart(4,'0')}%`;
+      if(mt) mt.textContent=`${vTime.toFixed(1).padStart(3,'0')}s / ${videoDuration.toFixed(1)}s`;
+      if(mtmp){ const t=187+smoothP*17; mtmp.textContent=`187°C → ${t.toFixed(0)}°C`; }
+
+      requestAnimationFrame(tick);
     }
-    frame();
-    reveals();
-  }
+    tick();
 
-  function syncUI(p){
-    const clamp = (v,a=0,b=1)=>Math.max(a,Math.min(b,v));
-    const map = (a,b)=>clamp((p-a)/(b-a));
-    const get = id=>document.getElementById(id);
-
-    const l1=get('h-l1'), l2=get('h-l2'), l3=get('h-l3');
-    if(l1){ const m=map(0,0.30); gsap.set(l1,{ y:-m*80, scale:1-m*0.07, opacity:1-m, filter:`blur(${m*5}px)` }); }
-    if(l2){ const m=map(0.10,0.48); gsap.set(l2,{ y:-m*100, scale:1-m*0.08, opacity:1-m, filter:`blur(${m*7}px)` }); }
-    if(l3){ const m=map(0.20,0.60); gsap.set(l3,{ y:-m*120, x:-m*16, scale:1-m*0.05, opacity:1-m, rotation:-m*1.2, filter:`blur(${m*5}px)` }); }
-
-    const eyeb=get('h-eyebrow'), kick=get('h-kicker'), copy=get('h-copy'), cta=get('h-cta'), meta=get('h-meta'), scr=get('h-scroll');
-    if(eyeb) gsap.set(eyeb,{ opacity:1-map(0,0.20)*1.2, y:-map(0,0.20)*18 });
-    if(kick) gsap.set(kick,{ opacity:1-map(0.02,0.26), y:-map(0.02,0.26)*14 });
-    if(copy) gsap.set(copy,{ opacity:1-map(0.33,0.66), y:-map(0.33,0.66)*36 });
-    if(cta){
-      const m=map(0.40,0.70);
-      gsap.set(cta,{ opacity:1-m, y:-m*28, scale:1-m*0.04, filter:`blur(${m*3}px)` });
-      const r=cta.querySelector('.cta-reflect'); if(r) r.style.transform=`translateX(${-80+p*160}%) skewX(-18deg)`;
-    }
-    if(meta) gsap.set(meta,{ opacity:1-map(0.48,0.76), y:-map(0.48,0.76)*26 });
-    if(scr) gsap.set(scr,{ opacity:1-map(0,0.18)*2 });
-
-    // video scale/brightness evolves with timeline
-    if(video){
-      const sc=1.06+p*0.10, br=0.96-p*0.12, sat=1.05+p*0.12;
-      // only apply if not being faded by story trigger (story trigger controls opacity)
-      const currentOp = parseFloat(video.style.opacity)||1;
-      if(currentOp>0.3){
-        gsap.set(video,{ scale:sc, filter:`contrast(1.05) brightness(${br}) saturate(${sat})` });
-      }
-    }
-    if(grain) grain.style.opacity=(0.032+p*0.055).toFixed(3);
-    if(p>0.70) nav.classList.add('compressed'); else nav.classList.remove('compressed');
-
-    const metaP=get('meta-progress'), metaT=get('meta-time'), metaTmp=get('meta-temp');
-    if(metaP) metaP.textContent=`${(p*100).toFixed(1).padStart(4,'0')}%`;
-    if(metaT) metaT.textContent=`${vidTime.toFixed(1).padStart(3,'0')}s / ${videoDuration.toFixed(1)}s`;
-    if(metaTmp){ const t=187+p*17; metaTmp.textContent=`187°C → ${t.toFixed(0)}°C`; }
-
-    document.querySelectorAll('.drink-glass-reflect').forEach((el,i)=>{ el.style.transform=`translateX(${-30+p*60+Math.sin(p*3+i)*6}%)`; });
-  }
-
-  function reveals(){
+    // reveals
     gsap.utils.toArray('.content-section .eyeline, .display, .lead, .story-right p, .section-desc, .drink-card, .col-card, .rp, .machine-frame, .g-item, .journal-card, .contact-grid > *')
-      .forEach(el=>{ gsap.fromTo(el,{y:40,opacity:0},{y:0,opacity:1,duration:0.95,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',once:true}}); });
-    document.querySelectorAll('[data-tilt]').forEach(card=>{
-      card.addEventListener('mousemove',(e)=>{ const r=card.getBoundingClientRect(); const dx=(e.clientX-(r.left+r.width/2))/r.width; const dy=(e.clientY-(r.top+r.height/2))/r.height; gsap.to(card,{rotationY:dx*8,rotationX:-dy*8,transformPerspective:1000,duration:0.7,ease:'power3.out'}); });
-      card.addEventListener('mouseleave',()=>{ gsap.to(card,{rotationY:0,rotationX:0,duration:0.9,ease:'elastic.out(1,0.45)'}); });
-    });
+      .forEach(el=>{ gsap.fromTo(el,{y:38,opacity:0},{y:0,opacity:1,duration:0.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',once:true}}); });
   }
-
-  document.querySelectorAll('a[href^=\"#\"]').forEach(a=>{
-    a.addEventListener('click',(e)=>{ const id=a.getAttribute('href'); if(id.length>1){ const t=document.querySelector(id); if(t){ e.preventDefault(); if(lenis) lenis.scrollTo(t,{offset:-56,duration:1.2}); else t.scrollIntoView({behavior:'smooth'}); } } });
-  });
 
   initScrub();
-  addEventListener('resize',()=>{ clearTimeout(window._rt); window._rt=setTimeout(()=>ScrollTrigger.refresh(),180); });
+  addEventListener('resize',()=>{ clearTimeout(window._r); window._r=setTimeout(()=>ScrollTrigger.refresh(),180); });
 
-  window.__emberDebug = ()=>({ target:targetP, smooth:smoothP, vidTime, dur:videoDuration, loaded:fullyLoaded, done:loaderDone, rs:video?.readyState, src:video?.currentSrc?.slice(-70) });
+  // anchor
+  document.querySelectorAll('a[href^=\"#\"]').forEach(a=>{
+    a.addEventListener('click',(e)=>{ const id=a.getAttribute('href'); if(id.length>1){ const t=document.querySelector(id); if(t){ e.preventDefault(); if(lenis && loaderDone) lenis.scrollTo(t,{offset:-56,duration:1.15}); else t.scrollIntoView({behavior:'smooth'}); } } });
+  });
+
+  window.__ember = ()=>({target:targetP, smooth:smoothP, vTime, dur:videoDuration, loaded:fullyLoaded, rs:video?.readyState, buf: video?.buffered?.length? video.buffered.end(video.buffered.length-1):0 });
 });
