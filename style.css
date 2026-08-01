@@ -119,48 +119,52 @@ button{border:0; background:none; font:inherit; color:inherit; cursor:pointer}
 .mobile-menu-links a:hover{padding-left:12px; color:var(--ember-2); border-color:rgba(255,107,53,0.3)}
 .mobile-menu-footer{font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--ink-dim); display:flex; flex-direction:column; gap:8px}
 
-/* HERO TRACK — Fixed video for seamless transition into next section */
-#hero-track{position:relative; height:280vh; background:transparent; z-index:2;}
+/* HERO TRACK — No video, pure image, fixed for seamless scroll */
+#hero-track{position:relative; height:260vh; background:transparent; z-index:2;}
 #hero-stage{
   position:fixed; top:0; left:0; width:100%; height:100vh;
   overflow:hidden; display:flex; align-items:center; justify-content:center;
-  z-index:1;
-  will-change:transform;
-  pointer-events:none;
+  z-index:1; will-change:transform; pointer-events:none;
 }
 #hero-stage .hero-content{pointer-events:none}
 #hero-stage .hero-content a, #hero-stage .hero-content button, #hero-stage .glass-cta{pointer-events:auto}
 #hero-wash{
-  position:relative; z-index:3; height:34vh; margin-top:-34vh;
-  background:linear-gradient(180deg, rgba(10,10,11,0) 0%, rgba(10,10,11,0.55) 35%, var(--bg) 88%);
+  position:relative; z-index:3; height:36vh; margin-top:-36vh;
+  background:linear-gradient(180deg, rgba(10,10,11,0) 0%, rgba(10,10,11,0.55) 38%, var(--bg) 90%);
   pointer-events:none;
 }
-.video-wrap{position:absolute; inset:0; width:100%; height:100%; overflow:hidden; background:#080606}
-#video-fallback{
-  position:absolute; inset:0; width:100%; height:100%;
+.visual-wrap{position:absolute; inset:0; width:100%; height:100%; overflow:hidden; background:#0C0A08; isolation:isolate}
+.hero-image{
+  position:absolute; inset:-8%; width:116%; height:116%;
   background:
-    radial-gradient(1200px 800px at 20% 15%, rgba(255,107,53,0.18), transparent 60%),
-    radial-gradient(900px 600px at 80% 85%, rgba(255,176,103,0.12), transparent 70%),
-    linear-gradient(30deg, #0E0A08 0%, #1E1510 35%, #120D0A 70%, #0A0807 100%);
-  transition:opacity 0.8s var(--ease-out);
-  z-index:0;
-}
-#video-fallback::after{
-  content:'';
-  position:absolute; inset:0;
-  background:url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1920') center/cover;
-  opacity:0.28; mix-blend-mode:overlay; filter:contrast(1.1) saturate(0.8) blur(0px);
-}
-#hero-video{
-  position:relative; z-index:1;
-  width:100%; height:100%; object-fit:cover; object-position:center center;
+    radial-gradient(1200px 800px at 25% 20%, rgba(255,107,53,0.16), transparent 60%),
+    radial-gradient(900px 600px at 80% 80%, rgba(255,176,103,0.10), transparent 70%),
+    url('https://images.unsplash.com/photo-1447933601403-0c6688de566e?q=80&w=1920') center/cover;
+  background-blend-mode: normal, normal, normal;
   transform:scale(1.06) translateZ(0);
   will-change:transform, filter;
-  filter:contrast(1.05) brightness(0.95) saturate(1.05);
-  opacity:0; transition:opacity 0.6s var(--ease-out);
+  filter:contrast(1.06) brightness(0.92) saturate(1.02);
+  transition:opacity 0.6s var(--ease-out);
 }
-#hero-video.is-ready{opacity:1}
-#video-fallback.is-hidden{opacity:0; pointer-events:none}
+.hero-image.secondary{
+  background:
+    radial-gradient(800px 600px at 60% 40%, rgba(255,107,53,0.12), transparent 60%),
+    url('https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1920') center/cover;
+  opacity:0.42; mix-blend-mode:soft-light;
+  transform:scale(1.12) translateZ(0);
+}
+.hero-smoke{
+  position:absolute; inset:0; z-index:2;
+  background:
+    radial-gradient(600px 400px at 50% 45%, rgba(245,241,235,0.06), transparent 70%),
+    radial-gradient(400px 300px at 30% 60%, rgba(255,255,255,0.04), transparent 60%);
+  animation:smokeDrift 18s ease-in-out infinite alternate;
+  mix-blend-mode:overlay; opacity:0.6; pointer-events:none;
+}
+@keyframes smokeDrift{
+  0%{transform:translate3d(-2%, -1%, 0) scale(1)}
+  100%{transform:translate3d(2%, 1.5%, 0) scale(1.05)}
+}
 .hero-overlay{position:absolute; inset:0; pointer-events:none}
 .hero-overlay.o1{background:linear-gradient(180deg, rgba(10,10,11,0.72) 0%, rgba(10,10,11,0.32) 18%, rgba(10,10,11,0.08) 38%, rgba(10,10,11,0) 58%);}
 .hero-overlay.o2{background:linear-gradient(0deg, rgba(10,10,11,0.88) 0%, rgba(10,10,11,0.55) 22%, rgba(10,10,11,0.15) 48%, rgba(10,10,11,0) 72%);}
