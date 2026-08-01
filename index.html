@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EMBER COFFEE — Crafted Slowly. Remembered Forever.</title>
+<meta name="description" content="EMBER COFFEE — Wood-fired roastery, slow-crafted coffee. A cinematic experience.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,300;6..96,400;6..96,500&family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500&family=Newsreader:ital,opsz,wght@0,6..72,300;1,6..72,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<!-- Grain & Light -->
+<div id="grain" aria-hidden="true"></div>
+<div id="cursor-light" aria-hidden="true"></div>
+<div id="page-light" aria-hidden="true"></div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="loader-inner">
+    <div class="loader-mark">EMBER</div>
+    <div class="loader-line"><span id="loader-bar"></span></div>
+    <div class="loader-meta">
+      <span id="loader-pct">00%</span>
+      <span>PREPARING THE POUR</span>
+    </div>
+  </div>
+</div>
+
+<!-- Navigation -->
+<nav id="nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo" aria-label="Ember Coffee Home">
+      <span class="logo-icon"></span>
+      <span>EMBER</span>
+      <span class="logo-dot">COFFEE</span>
+    </a>
+    <div class="nav-links">
+      <a href="#story">Story</a>
+      <a href="#drinks">Signature</a>
+      <a href="#collection">Collection</a>
+      <a href="#roastery">Roastery</a>
+      <a href="#journal">Journal</a>
+    </div>
+    <div class="nav-actions">
+      <a href="#contact" class="nav-cta-glass">
+        <span>Reserve</span>
+      </a>
+      <button id="menu-toggle" aria-label="Menu">
+        <span></span><span></span>
+      </button>
+    </div>
+  </div>
+  <div class="nav-progress"><span id="nav-progress-bar"></span></div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu">
+  <div class="mobile-menu-links">
+    <a href="#story">01 — Story</a>
+    <a href="#drinks">02 — Signature Drinks</a>
+    <a href="#collection">03 — Collection</a>
+    <a href="#roastery">04 — Roastery</a>
+    <a href="#gallery">05 — Gallery</a>
+    <a href="#journal">06 — Journal</a>
+    <a href="#contact">07 — Contact</a>
+  </div>
+  <div class="mobile-menu-footer">
+    <p>Pune • Western Ghats • Wood-fired since 2019</p>
+    <p>07:00 — 19:00 IST</p>
+  </div>
+</div>
+
+<!-- Main -->
+<main id="main">
+
+  <!-- HERO TRACK: Apple-style scroll scrub -->
+  <section id="hero-track">
+    <div id="hero-stage">
+      <!-- Video -->
+      <div class="video-wrap">
+        <video id="hero-video"
+               muted
+               playsinline
+               preload="auto"
+               poster=""
+               tabindex="-1"
+               aria-hidden="true">
+          <source src="./coffeebackground.mp4" type="video/mp4" />
+        </video>
+        <!-- Subtle dark overlay only for contrast, center clean -->
+        <div class="hero-overlay o1"></div>
+        <div class="hero-overlay o2"></div>
+        <div class="hero-overlay o3"></div>
+        <div class="hero-vignette"></div>
+      </div>
+
+      <!-- Hero UI -->
+      <div class="hero-content">
+        <div class="hero-top">
+          <span class="eyebrow" id="h-eyebrow">EST. 2019 • WESTERN GHATS, IND</span>
+          <div class="hero-kicker" id="h-kicker">
+            <span class="dot"></span>
+            <span>Scroll to pour — 10 second ritual</span>
+          </div>
+        </div>
+
+        <div class="hero-center">
+          <h1 class="hero-headline">
+            <span class="h-line l1" id="h-l1"><em>Crafted</em> Slowly.</span>
+            <span class="h-line l2" id="h-l2">Remembered</span>
+            <span class="h-line l3" id="h-l3"><i>Forever.</i></span>
+          </h1>
+        </div>
+
+        <div class="hero-bottom">
+          <div class="hero-copy-block" id="h-copy">
+            <p class="hero-p">
+              We roast in small embers, not flames. Ten seconds of pour,
+              ten hours of memory — from our wood-fired roastery in the hills to your morning ritual.
+            </p>
+            <a href="#collection" class="glass-cta" id="h-cta">
+              <span class="cta-reflect"></span>
+              <span class="cta-content">
+                <span class="cta-label">Enter Ember</span>
+                <span class="cta-sub">Reserve a taste — 12 seats daily</span>
+              </span>
+              <span class="cta-arrow">↗</span>
+            </a>
+          </div>
+
+          <div class="hero-meta" id="h-meta">
+            <div class="meta-col">
+              <span class="meta-label">Scroll Progress</span>
+              <span class="meta-value" id="meta-progress">00.0%</span>
+            </div>
+            <div class="meta-col">
+              <span class="meta-label">Video Time</span>
+              <span class="meta-value" id="meta-time">00.0s / 10.0s</span>
+            </div>
+            <div class="meta-col hide-m">
+              <span class="meta-label">Roast Temp</span>
+              <span class="meta-value" id="meta-temp">187°C → 204°C</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-scroll-indicator" id="h-scroll">
+          <div class="scroll-line"></div>
+          <span>SCRUB TO POUR</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Transition Wash -->
+  <div id="hero-wash"></div>
+
+  <!-- STORY -->
+  <section id="story" class="content-section">
+    <div class="section-inner">
+      <div class="stagger-wrap">
+        <div class="eyeline">
+          <span>01 / STORY</span>
+          <span class="eyeline-line"></span>
+          <span>Why we choose ember over flame</span>
+        </div>
+        <div class="story-grid">
+          <div class="story-left">
+            <h2 class="display">
+              Fire that <br><i>remembers</i> <br>the wood.
+            </h2>
+            <div class="story-ornament">✺</div>
+          </div>
+          <div class="story-right">
+            <p class="lead">In 2019 we built a roaster from reclaimed kiln bricks in a shed outside Pune. No gas. Only seasoned jackfruit wood and a thermometer that often failed.</p>
+            <p>Flame scorches. Ember coaxes. At 187°C the bean cracks for the first time — not with violence, but with a sigh. We listen. We wait. The second crack never comes in our roastery. We stop before memory burns.</p>
+            <p>Every batch is 6 kilos. 22 minutes. One song on vinyl, side A to side B. That’s our measure.</p>
+            <div class="story-stats">
+              <div><b>6kg</b><span>Small batch</span></div>
+              <div><b>22m</b><span>Roast time</span></div>
+              <div><b>72h</b><span>Rest before brew</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SIGNATURE DRINKS -->
+  <section id="drinks" class="content-section dark">
+    <div class="section-inner">
+      <div class="eyeline light">
+        <span>02 / SIGNATURE</span>
+        <span class="eyeline-line"></span>
+        <span>Three ways we pour memory</span>
+      </div>
+      <div class="drinks-header">
+        <h2 class="display large">Signature <i>Drinks</i></h2>
+        <p class="section-desc">Not menu items. Rituals. Each one tuned to the hour of the day your memory is sharpest.</p>
+      </div>
+      <div class="drinks-grid">
+        <article class="drink-card" data-tilt>
+          <div class="drink-media">
+            <div class="drink-img ph ph1"></div>
+            <div class="drink-glass-reflect"></div>
+            <span class="drink-no">01</span>
+            <span class="drink-time">06:30 — First Light</span>
+          </div>
+          <div class="drink-body">
+            <h3>Ember Black</h3>
+            <p>Our wood-fired roast, 18g, 92°C, 28 second pull. No milk. No sugar. Just smoke, dark chocolate, and a finish that stays.</p>
+            <div class="drink-meta"><span>Washed • 1550m</span><span>₹280</span></div>
+          </div>
+        </article>
+        <article class="drink-card featured" data-tilt>
+          <div class="drink-media">
+            <div class="drink-img ph ph2"></div>
+            <div class="drink-glass-reflect"></div>
+            <span class="drink-no">02</span>
+            <span class="drink-time">10:00 — Late Morning</span>
+            <span class="drink-badge">House favourite</span>
+          </div>
+          <div class="drink-body">
+            <h3>Smoked Vanilla Cold Brew</h3>
+            <p>72 hour cold brew kissed with toasted jackfruit wood smoke, house vanilla, and oat milk foam. Served in smoked glass.</p>
+            <div class="drink-meta"><span>Natural • 1400m</span><span>₹380</span></div>
+          </div>
+        </article>
+        <article class="drink-card" data-tilt>
+          <div class="drink-media">
+            <div class="drink-img ph ph3"></div>
+            <div class="drink-glass-reflect"></div>
+            <span class="drink-no">03</span>
+            <span class="drink-time">16:30 — Golden Hour</span>
+          </div>
+          <div class="drink-body">
+            <h3>Fig & Ember</h3>
+            <p>Double shot poured over fresh fig compote, cardamom, and a whisper of sea salt. Our winter ritual, now year-round.</p>
+            <div class="drink-meta"><span>Honey • 1650m</span><span>₹420</span></div>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLLECTION -->
+  <section id="collection" class="content-section">
+    <div class="section-inner">
+      <div class="eyeline">
+        <span>03 / COLLECTION</span>
+        <span class="eyeline-line"></span>
+        <span>In-season, micro-lot, traceable</span>
+      </div>
+      <div class="collection-header">
+        <h2 class="display">Coffee<br>you can<br><i>trace</i> to a tree.</h2>
+        <div class="collection-actions">
+          <p>Every bag has a farmer’s name, harvest date, and the wood we used to roast it. Scan the QR for the exact roast curve.</p>
+          <a href="#" class="link-underline">Download roast journal (PDF) ↗</a>
+        </div>
+      </div>
+      <div class="collection-grid">
+        <!-- Card -->
+        <div class="col-card">
+          <div class="col-top">
+            <span>Ghats-01</span><span>Washed • Chikmagalur</span>
+          </div>
+          <div class="col-mid">
+            <h4>Ratnagiri<br>Ember</h4>
+            <div class="col-notes"><span>Dried Mango</span><span>Jaggery</span><span>Smoke</span></div>
+          </div>
+          <div class="col-bottom">
+            <span>1200m — Smt. Lakshmi</span>
+            <b>₹850 / 250g</b>
+          </div>
+          <div class="col-glow"></div>
+        </div>
+        <div class="col-card dark-card">
+          <div class="col-top">
+            <span>Ghats-03</span><span>Natural • Shevaroy</span>
+          </div>
+          <div class="col-mid">
+            <h4>Yercaud<br>Midnight</h4>
+            <div class="col-notes light"><span>Black Fig</span><span>Tamarind</span><span>Cacao</span></div>
+          </div>
+          <div class="col-bottom">
+            <span>1450m — Mr. Karthik</span>
+            <b>₹950 / 250g</b>
+          </div>
+          <div class="col-glow ember"></div>
+        </div>
+        <div class="col-card">
+          <div class="col-top">
+            <span>Ghats-07</span><span>Honey • Biligiriranga</span>
+          </div>
+          <div class="col-mid">
+            <h4>BR Hills<br>Honey</h4>
+            <div class="col-notes"><span>Orange Zest</span><span>Walnut</span><span>Caramel</span></div>
+          </div>
+          <div class="col-bottom">
+            <span>1650m — Soliga Collective</span>
+            <b>₹900 / 250g</b>
+          </div>
+          <div class="col-glow"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ROASTERY -->
+  <section id="roastery" class="content-section dark roastery">
+    <div class="roastery-sticky-wrap">
+      <div class="section-inner roastery-inner">
+        <div class="roastery-left">
+          <div class="eyeline light">
+            <span>04 / ROASTERY</span>
+            <span class="eyeline-line"></span>
+            <span>Built by hand, fired by wood</span>
+          </div>
+          <h2 class="display"><i>Wood</i>-fired,<br>not gas-fired.</h2>
+          <div class="roastery-points">
+            <div class="rp">
+              <span class="rp-no">01</span>
+              <div>
+                <h5>Reclaimed Kiln</h5>
+                <p>Built from 1970s brick kiln, holds heat 4x longer than steel drum.</p>
+              </div>
+            </div>
+            <div class="rp">
+              <span class="rp-no">02</span>
+              <div>
+                <h5>Jackfruit & Silver Oak</h5>
+                <p>We season wood 9 months. Too young smokes too much. Too old, loses song.</p>
+              </div>
+            </div>
+            <div class="rp">
+              <span class="rp-no">03</span>
+              <div>
+                <h5>One Ear Roasting</h5>
+                <p>No computers. We roast listening to first crack like musicians listening to tempo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="roastery-right">
+          <div class="roast-machine">
+            <div class="machine-frame">
+              <div class="machine-screen">
+                <div class="temp-graph">
+                  <svg viewBox="0 0 400 150" fill="none"><path d="M0 120 Q80 110 140 80 T260 50 Q320 35 400 20" stroke="#FF7A3D" stroke-width="2" stroke-linecap="round"/><path d="M0 130 Q80 125 140 105 T260 90 Q320 85 400 80" stroke="#fff" stroke-width="1" stroke-opacity="0.3" stroke-dasharray="4 6"/></svg>
+                  <div class="temp-labels"><span>187°C first crack</span><span>204°C drop</span></div>
+                </div>
+                <div class="machine-stats">
+                  <div><small>BATCH #1842</small><b>6.0 kg</b></div>
+                  <div><small>WOOD</small><b>Jackfruit</b></div>
+                  <div><small>TIME</small><b>21:43</b></div>
+                </div>
+              </div>
+              <div class="machine-glow"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section id="gallery" class="content-section">
+    <div class="section-inner">
+      <div class="eyeline">
+        <span>05 / GALLERY</span>
+        <span class="eyeline-line"></span>
+        <span>A day in embers</span>
+      </div>
+      <div class="gallery-masonry">
+        <div class="g-item tall"><div class="ph g1"></div><span>05:45 Wood stacked</span></div>
+        <div class="g-item"><div class="ph g2"></div><span>06:30 First light, first pour</span></div>
+        <div class="g-item tall"><div class="ph g3"></div><span>09:00 Cupping — listen, not taste</span></div>
+        <div class="g-item wide"><div class="ph g4"></div><span>10:00–18:00 Doors open — 12 seats, no laptops after 11am, vinyl only</span></div>
+        <div class="g-item"><div class="ph g5"></div><span>19:00 Embers resting for tomorrow</span></div>
+        <div class="g-item tall"><div class="ph g6"></div><span>Roast curve #1842 — Lakshmi's lot</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JOURNAL -->
+  <section id="journal" class="content-section dark">
+    <div class="section-inner">
+      <div class="journal-head">
+        <div class="eyeline light">
+          <span>06 / JOURNAL</span>
+          <span class="eyeline-line"></span>
+          <span>Notes from the roastery</span>
+        </div>
+        <h2 class="display small">Field <i>Notes</i></h2>
+      </div>
+      <div class="journal-grid">
+        <a href="#" class="journal-card">
+          <span class="jc-date">JULY 14, 2026</span>
+          <h4>Why we stopped at first crack. On purpose.</h4>
+          <p>Most roasters chase second crack for "development". We left it. Here’s what we kept.</p>
+          <span class="jc-arrow">↗</span>
+        </a>
+        <a href="#" class="journal-card">
+          <span class="jc-date">JUNE 02, 2026</span>
+          <h4>The 72-hour rest rule no one tells you.</h4>
+          <p>Coffee is CO₂. CO₂ is chaos. We rest 72 hours — not out of patience, but physics.</p>
+          <span class="jc-arrow">↗</span>
+        </a>
+        <a href="#" class="journal-card">
+          <span class="jc-date">MAY 19, 2026</span>
+          <h4>Track 03: What we play when we roast.</h4>
+          <p>A playlist. 22 minutes. One side of vinyl. Same every roast. Muscle memory.</p>
+          <span class="jc-arrow">↗</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section id="contact" class="content-section contact">
+    <div class="section-inner">
+      <div class="contact-grid">
+        <div class="contact-left">
+          <h2 class="display huge">Come<br>sit with<br><i>embers.</i></h2>
+          <div class="contact-hint">
+            <p>12 seats. Wood-fired. No QR codes for Wi-Fi — we’ll just tell you.</p>
+            <p>Reserve if you need certainty. Walk in if you like luck.</p>
+          </div>
+        </div>
+        <div class="contact-right">
+          <form class="contact-form glass-form" onsubmit="return false;">
+            <div class="form-row">
+              <label>Name</label>
+              <input type="text" placeholder="Your name" required />
+            </div>
+            <div class="form-row">
+              <label>Email</label>
+              <input type="email" placeholder="you@ember.coffee" required />
+            </div>
+            <div class="form-row">
+              <label>When?</label>
+              <select>
+                <option>Today — if seats</option>
+                <option>Tomorrow morning</option>
+                <option>This weekend</option>
+                <option>For beans only</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>Message</label>
+              <textarea placeholder="One line is enough."></textarea>
+            </div>
+            <button class="glass-cta submit-cta" type="submit">
+              <span class="cta-reflect"></span>
+              <span class="cta-content"><span class="cta-label">Send request</span></span>
+              <span class="cta-arrow">→</span>
+            </button>
+            <div class="form-foot">
+              <span>Reply within 2 hrs • 07:00–19:00 IST</span>
+              <span>Pune • FC Road • By invitation after 6PM</span>
+            </div>
+          </form>
+
+          <div class="contact-map glass-card">
+            <div class="map-dots"></div>
+            <div class="map-info">
+              <b>EMBER COFFEE, Pune</b>
+              <span>FC Road, beside Vaishali, Lane 4. Look for smoke.</span>
+            </div>
+            <div class="map-action">
+              <span>18.5204° N, 73.8567° E</span>
+              <a href="#">Open Maps ↗</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="site-footer">
+        <div class="footer-left">
+          <span class="footer-logo">EMBER®</span>
+          <span>©2026 Ember Coffee Roasters. Wood-fired in Western Ghats. Poured in Pune. Remembered forever.</span>
+        </div>
+        <div class="footer-links">
+          <a href="#">Instagram</a>
+          <a href="#">Roast Journal</a>
+          <a href="#">Wholesale</a>
+          <a href="#">Privacy — we keep none</a>
+        </div>
+      </footer>
+    </div>
+  </section>
+
+</main>
+
+<!-- Scripts CDN -->
+<!-- GSAP + Lenis (GitHub Pages CDN, no build needed) -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+<script src="https://unpkg.com/lenis@1.1.18/dist/lenis.min.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
