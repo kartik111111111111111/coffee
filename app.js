@@ -1,321 +1,350 @@
-/* EMBER COFFEE — App.js | Loader waits for total video load */
+/* EMBER COFFEE — Fixed video + blob preload = totally loaded before play, scrub within next section */
 document.addEventListener('DOMContentLoaded', () => {
+  const $ = (s) => document.querySelector(s);
   const log = (...a) => console.log('[EMBER]', ...a);
 
-  const loader = document.getElementById('loader');
-  const loaderBar = document.getElementById('loader-bar');
-  const loaderPct = document.getElementById('loader-pct');
-  const loaderMsg = document.getElementById('loader-msg');
-  const video = document.getElementById('hero-video');
-  const videoFallback = document.getElementById('video-fallback');
-  const nav = document.getElementById('nav');
-  const navProgressBar = document.getElementById('nav-progress-bar');
-  const heroTrack = document.getElementById('hero-track');
-  const grain = document.getElementById('grain');
-  const cursorLight = document.getElementById('cursor-light');
-  const pageLight = document.getElementById('page-light');
-  const menuToggle = document.getElementById('menu-toggle');
-  const mobileMenu = document.getElementById('mobile-menu');
+  const loader = $('#loader');
+  const loaderBar = $('#loader-bar');
+  const loaderPct = $('#loader-pct');
+  const loaderMsg = $('#loader-msg');
+  const video = $('#hero-video');
+  const videoFallback = $('#video-fallback');
+  const nav = $('#nav');
+  const navProgressBar = $('#nav-progress-bar');
+  const heroTrack = $('#hero-track');
+  const heroStage = $('#hero-stage');
+  const grain = $('#grain');
+  const cursorLight = $('#cursor-light');
+  const pageLight = $('#page-light');
+  const menuToggle = $('#menu-toggle');
+  const mobileMenu = $('#mobile-menu');
 
   if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') {
     log('GSAP missing');
-    setTimeout(()=>location.reload(), 1500);
+    setTimeout(()=>location.reload(), 1200);
     return;
   }
   gsap.registerPlugin(ScrollTrigger);
 
-  // Lenis — start stopped to respect loader
+  // Lenis — start stopped until video totally loaded
   let lenis = null;
   try {
-    const Ctor = window.Lenis || window.lenis;
+    const Ctor = window.Lenis;
     if (Ctor) {
       lenis = new Ctor({
-        duration: 1.15,
+        duration: 1.12,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         smoothWheel: true,
         smoothTouch: false,
-        touchMultiplier: 1.6,
+        touchMultiplier: 1.5,
         orientation: 'vertical',
-        gestureOrientation: 'vertical',
       });
       lenis.on('scroll', ScrollTrigger.update);
-      gsap.ticker.add((time) => lenis.raf(time * 1000));
+      gsap.ticker.add((t) => lenis.raf(t*1000));
       gsap.ticker.lagSmoothing(0);
-      lenis.stop(); // lock scroll until video fully loaded
-      log('Lenis active, stopped for loader');
+      lenis.stop();
     }
-  } catch (e) { log('Lenis init fail', e); }
+  } catch (e) { log('Lenis fail', e); }
 
-  // Cursor light independent
-  let mx = window.innerWidth/2, my = window.innerHeight/2, cx=mx, cy=my, cActive=false;
-  window.addEventListener('mousemove', (e)=>{ mx=e.clientX; my=e.clientY; if(!cActive){ cActive=true; gsap.to(cursorLight,{opacity:1,duration:0.6}); } }, {passive:true});
-  (function curLoop(){ cx+=(mx-cx)*0.07; cy+=(my-cy)*0.07; if(cursorLight) cursorLight.style.transform=`translate3d(${cx}px,${cy}px,0) translate(-50%,-50%)`; if(pageLight){ const px=(cx/window.innerWidth-0.5)*36; const py=(cy/window.innerHeight-0.5)*28; pageLight.style.transform=`translate3d(${px}px,${py}px,0)`; } requestAnimationFrame(curLoop); })();
+  // cursor light independent
+  let mx = innerWidth/2, my = innerHeight/2, cx=mx, cy=my, cActive=false;
+  addEventListener('mousemove', (e)=>{ mx=e.clientX; my=e.clientY; if(!cActive){ cActive=true; gsap.to(cursorLight,{opacity:1,duration:0.5}); } }, {passive:true});
+  (function curLoop(){ cx+=(mx-cx)*0.08; cy+=(my-cy)*0.08; if(cursorLight) cursorLight.style.transform=`translate3d(${cx}px,${cy}px,0) translate(-50%,-50%)`; if(pageLight){ const px=(cx/innerWidth-0.5)*28; const py=(cy/innerHeight-0.5)*22; pageLight.style.transform=`translate3d(${px}px,${py}px,0)`; } requestAnimationFrame(curLoop); })();
 
-  // Mobile menu
-  if (menuToggle){
+  // menu
+  if (menuToggle) {
     menuToggle.addEventListener('click', ()=>{
       const open = mobileMenu.classList.contains('open');
       mobileMenu.classList.toggle('open', !open);
-      if(lenis){ if(!open) lenis.stop(); else { if(loaderDone) lenis.start(); } }
-      gsap.to(menuToggle.children,{rotate:i=>open?0:(i===0?45:-45), y:i=>open?0:(i===0?3:-3), duration:0.45, ease:'power3.inOut'});
+      if (lenis) { if(!open) lenis.stop(); else if(loaderDone) lenis.start(); }
+      gsap.to(menuToggle.children,{rotate:i=>open?0:(i===0?45:-45), y:i=>open?0:(i===0?3:-3), duration:0.4, ease:'power3.inOut'});
     });
-    mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click', ()=>{ mobileMenu.classList.remove('open'); if(lenis && loaderDone) lenis.start(); gsap.to(menuToggle.children,{rotate:0,y:0,duration:0.35}); }));
+    mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{ mobileMenu.classList.remove('open'); if(lenis && loaderDone) lenis.start(); }));
   }
 
-  // ===== LOADER: MUST WAIT UNTIL VIDEO TOTALLY LOADED =====
+  // ===== LOADER: BLOB PRELOAD = TOTALLY LOADED =====
   let loaderDone = false;
-  let videoDuration = 10;
-  let videoFullyLoaded = false;
-  let triedFallback = false;
-  const FALLBACK_SRC = 'https://videos.pexels.com/video-files/29068399/12556689_1920_1080_30fps.mp4';
+  let videoDuration = 10; // fallback
+  let videoBlobUrl = null;
+  let fullyLoaded = false;
 
   function setLoader(pct, msg){
-    const clamped = Math.max(0, Math.min(1, pct));
-    if(loaderBar) loaderBar.style.width = `${clamped*100}%`;
-    if(loaderPct) loaderPct.textContent = `${String(Math.floor(clamped*100)).padStart(2,'0')}%`;
+    const c = Math.max(0, Math.min(1, pct));
+    if(loaderBar) loaderBar.style.width = `${c*100}%`;
+    if(loaderPct) loaderPct.textContent = `${String(Math.floor(c*100)).padStart(2,'0')}%`;
     if(msg && loaderMsg) loaderMsg.textContent = msg;
   }
-
   function hideLoader(){
-    if(loaderDone) return;
-    if(!videoFullyLoaded){
-      log('hideLoader called but video not fully loaded — ignoring');
-      return;
-    }
+    if(loaderDone || !fullyLoaded) return;
     loaderDone = true;
     setLoader(1, 'READY');
-    log('Hiding loader — video totally loaded');
-    gsap.to(loader, { opacity:0, duration:0.85, ease:'power3.inOut', onComplete:()=>{ loader.classList.add('hidden'); ScrollTrigger.refresh(); }});
-    gsap.fromTo('#hero-stage .hero-content', {opacity:0}, {opacity:1, duration:1, ease:'power2.out', delay:0.15});
+    gsap.to(loader,{opacity:0, duration:0.7, ease:'power3.inOut', onComplete:()=>{ loader.classList.add('hidden'); ScrollTrigger.refresh(); }});
+    gsap.fromTo('#hero-stage .hero-content',{opacity:0},{opacity:1,duration:0.9,ease:'power2.out',delay:0.12});
     if(lenis) lenis.start();
-    if(video){ try{ video.pause(); video.currentTime = 0.001; }catch{} }
+    // ensure first frame
+    if(video){ try{ video.pause(); if(video.readyState>=1) video.currentTime=0.001; }catch{} }
+    log('Loader hidden, video totally loaded, blob url:', videoBlobUrl ? 'yes' : 'no');
   }
 
-  // Check if buffered enough
-  function checkBuffered(){
-    if(!video || videoFullyLoaded) return;
-    try{
-      let pct = 0;
-      if(video.buffered && video.buffered.length){
-        const dur = video.duration || videoDuration;
-        const end = video.buffered.end(video.buffered.length-1);
-        pct = dur ? end / dur : 0;
-      } else {
-        // fallback to readyState progress estimation
-        if(video.readyState >= 4) pct = 1;
-        else if(video.readyState >= 3) pct = 0.9;
-        else pct = 0;
-      }
-      // never go backwards visually
-      const curWidth = loaderBar ? parseFloat(loaderBar.style.width)||0 : 0;
-      const visualPct = Math.max(pct, curWidth/100);
-      if(!loaderDone){
-        if(video.readyState < 2) setLoader(Math.max(0.05, visualPct*0.6), `LOADING HERO • ${Math.floor(visualPct*100)}%`);
-        else if(video.readyState < 4) setLoader(Math.max(0.25, visualPct*0.9), `DECODING • ${Math.floor(visualPct*100)}%`);
-        else setLoader(visualPct, `BUFFERING • ${Math.floor(visualPct*100)}%`);
-      }
+  async function preloadVideoBlob(){
+    const localSrc = './coffeebackground.mp4';
+    const fallbackSrc = 'https://videos.pexels.com/video-files/29068399/12556689_1920_1080_30fps.mp4';
+    let srcToTry = localSrc;
 
-      // Totally loaded condition: buffered >= 99.5% AND readyState 4
-      if(video.readyState >= 4){
-        const dur = video.duration || videoDuration;
-        const bufferedEnd = video.buffered.length ? video.buffered.end(video.buffered.length-1) : dur;
-        const bufferedPct = dur ? bufferedEnd/dur : 0;
-        if(bufferedPct >= 0.995 || video.buffered.length===0){
-          videoFullyLoaded = true;
-          if(video.duration && !isNaN(video.duration)) videoDuration = video.duration;
-          video.classList.add('is-ready');
-          if(videoFallback) videoFallback.classList.add('is-hidden');
-          log('Video totally loaded', videoDuration, 'buffered', bufferedPct);
-          setLoader(1, `READY • ${videoDuration.toFixed(1)}s`);
-          setTimeout(hideLoader, 380); // tiny delay for visual 100%
+    async function fetchWithProgress(url){
+      log('Fetching', url);
+      setLoader(0.03, 'FETCHING HERO');
+      const res = await fetch(url, {cache:'force-cache'});
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      const contentLength = parseInt(res.headers.get('Content-Length')||'0',10);
+      const reader = res.body.getReader();
+      let received = 0;
+      const chunks = [];
+      while(true){
+        const {done, value} = await reader.read();
+        if(done) break;
+        chunks.push(value);
+        received += value.length;
+        if(contentLength){
+          const pct = received / contentLength;
+          // map fetch 0-1 to loader 0.08-0.92
+          setLoader(0.08 + pct*0.84, `DOWNLOADING • ${Math.floor(pct*100)}% • ${(received/1024/1024).toFixed(2)}MB`);
+        } else {
+          setLoader(Math.min(0.92, 0.08 + received/ (3*1024*1024)), `DOWNLOADING • ${(received/1024/1024).toFixed(2)}MB`);
         }
       }
-    }catch(e){ log('checkBuffered err', e); }
-  }
+      const blob = new Blob(chunks, {type: res.headers.get('Content-Type')||'video/mp4'});
+      return blob;
+    }
 
-  let bufferInterval = null;
-
-  if(video){
-    video.autoplay = false;
-    video.loop = false;
-    video.muted = true;
-    video.setAttribute('playsinline','');
-    video.preload = 'auto';
-    video.pause();
-    setLoader(0.02, 'INITIALIZING');
-
-    video.addEventListener('loadstart', ()=>{ setLoader(0.05,'LOAD START'); log('loadstart', video.currentSrc); });
-    video.addEventListener('loadedmetadata', ()=>{
-      if(video.duration && !isNaN(video.duration)) videoDuration = video.duration;
-      setLoader(0.18,'METADATA • '+videoDuration.toFixed(1)+'s');
-      log('metadata', videoDuration);
-      try{ video.currentTime = 0.001; }catch{}
-    });
-    video.addEventListener('progress', checkBuffered);
-    video.addEventListener('canplay', ()=>{ setLoader(0.75,'CAN PLAY'); checkBuffered(); });
-    video.addEventListener('canplaythrough', ()=>{
-      setLoader(0.96,'CAN PLAY THROUGH');
-      log('canplaythrough');
-      // do NOT hide yet — wait for 100% buffered check
-      checkBuffered();
-    });
-    video.addEventListener('waiting', ()=>{ if(loaderMsg) loaderMsg.textContent='BUFFERING…'; });
-    video.addEventListener('playing', ()=>{ try{ video.pause(); }catch{} });
-
-    video.addEventListener('error', ()=>{
-      log('video error', video.error, 'src', video.currentSrc);
-      if(!triedFallback){
-        triedFallback = true;
-        setLoader(0.12,'LOCAL FAILED — TRYING PREVIEW');
-        // Switch to remote preview but still must totally load
-        video.src = FALLBACK_SRC;
-        video.load();
-        videoFullyLoaded = false;
-      } else {
-        // both failed — cannot ever be "totally loaded", show fallback gradient and force hide after message
-        log('Both sources failed');
-        setLoader(1,'GRADIENT FALLBACK — NO VIDEO FILE');
-        videoFullyLoaded = true; // allow loader to hide in fallback mode
-        setTimeout(hideLoader, 600);
+    try{
+      let blob;
+      try{
+        blob = await fetchWithProgress(srcToTry);
+      }catch(e){
+        log('Local fetch failed', e.message, 'trying fallback remote');
+        setLoader(0.12, 'LOCAL NOT CACHED — REMOTE PREVIEW');
+        srcToTry = fallbackSrc;
+        blob = await fetchWithProgress(srcToTry);
       }
-    });
 
-    // Start loading
-    video.load();
+      setLoader(0.93, 'DECODING');
+      videoBlobUrl = URL.createObjectURL(blob);
+      video.src = videoBlobUrl;
+      video.load();
+      // wait for metadata + canplaythrough
+      await new Promise((resolve, reject)=>{
+        let resolved = false;
+        const onMeta = ()=>{
+          if(video.duration && !isNaN(video.duration)) videoDuration = video.duration;
+          log('blob metadata', videoDuration);
+          try{ video.currentTime = 0.001; }catch{}
+        };
+        const onCanPlayThrough = ()=>{
+          if(resolved) return;
+          resolved = true;
+          cleanup();
+          resolve();
+        };
+        const onError = (ev)=>{
+          cleanup();
+          reject(ev);
+        };
+        const cleanup = ()=>{
+          video.removeEventListener('loadedmetadata', onMeta);
+          video.removeEventListener('canplaythrough', onCanPlayThrough);
+          video.removeEventListener('error', onError);
+        };
+        video.addEventListener('loadedmetadata', onMeta);
+        video.addEventListener('canplaythrough', onCanPlayThrough, {once:true});
+        video.addEventListener('error', onError, {once:true});
+        // safety timeout for canplaythrough — if not firing, use canplay
+        setTimeout(()=>{
+          if(!resolved && video.readyState>=3){
+            log('canplaythrough timeout, using readyState', video.readyState);
+            resolved = true;
+            cleanup();
+            resolve();
+          }
+        }, 2500);
+      });
 
-    // Poll buffered every 120ms — guarantees progress even if progress event sparse
-    bufferInterval = setInterval(checkBuffered, 120);
+      video.classList.add('is-ready');
+      if(videoFallback) videoFallback.classList.add('is-hidden');
+      fullyLoaded = true;
+      setLoader(0.99, 'PREPARED');
+      setTimeout(hideLoader, 320);
 
-    // Safety: if for some reason video never fires events (cache?), check after 500ms
-    setTimeout(checkBuffered, 500);
-
-  } else {
-    // No video element — shouldn't happen, but hide loader with gradient
-    log('No video element');
-    videoDuration = 10;
-    videoFullyLoaded = true;
-    setTimeout(hideLoader, 400);
+    }catch(err){
+      log('Blob preload failed', err);
+      // fallback to letting video element load normally (still better than broken)
+      setLoader(0.88, 'FALLBACK DIRECT LOAD');
+      try{
+        video.src = srcToTry;
+        video.load();
+        video.addEventListener('canplaythrough', ()=>{
+          fullyLoaded = true;
+          video.classList.add('is-ready');
+          if(videoFallback) videoFallback.classList.add('is-hidden');
+          setLoader(1,'READY (DIRECT)');
+          setTimeout(hideLoader, 350);
+        }, {once:true});
+      }catch{
+        // ultimate gradient fallback
+        setLoader(1,'GRADIENT FALLBACK');
+        fullyLoaded = true;
+        setTimeout(hideLoader, 400);
+      }
+    }
   }
+
+  // start blob preload
+  preloadVideoBlob();
 
   // ===== SCROLL SCRUB =====
-  let targetProgress = 0;
-  let smoothProgress = 0;
-  let currentTimeSmoothed = 0;
+  // Make video fixed, so it plays "within next section" as final frame lingering
+  // Hero track is 280vh scroll driver
+  let targetP = 0;
+  let smoothP = 0;
+  let vidTime = 0;
   let heroVisible = true;
 
-  function initScroll(){
+  function initScrub(){
+    // driver
     ScrollTrigger.create({
       trigger: heroTrack,
       start: 'top top',
       end: 'bottom bottom',
+      scrub: false,
       onUpdate: (self)=>{
-        targetProgress = self.progress;
-        heroVisible = self.progress < 0.999 && self.progress >=0;
-      },
-      onLeave: ()=>{ heroVisible=false; },
-      onEnterBack: ()=>{ heroVisible=true; }
+        targetP = self.progress; // 0..1 across 280vh
+        heroVisible = self.progress < 0.999;
+      }
     });
 
+    // overall nav progress
     ScrollTrigger.create({
       trigger: document.body,
       start: 'top top',
       end: 'bottom bottom',
       onUpdate: (self)=>{
-        const p=self.progress;
-        if(navProgressBar) navProgressBar.style.width=`${p*100}%`;
-        if(p>0.02) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
+        if(navProgressBar) navProgressBar.style.width = `${self.progress*100}%`;
+        if(self.progress>0.02) nav.classList.add('scrolled'); else nav.classList.remove('scrolled');
       }
     });
 
+    // Fade video into next section — keep final frame visible for 40vh into Story
+    ScrollTrigger.create({
+      trigger: '#story',
+      start: 'top 90%',
+      end: 'top 10%',
+      scrub: true,
+      onUpdate: (self)=>{
+        // as story enters, keep video at 100% time but reduce brightness/opacity slightly
+        const p = self.progress; // 0 when story bottom enters, 1 when top hits
+        if(video){
+          const opacity = 1 - p*0.65; // linger final frame within next section
+          video.style.opacity = `${opacity}`;
+          if(videoFallback) videoFallback.style.opacity = `${opacity*0.4}`;
+        }
+        // tint wash
+        const wash = document.getElementById('hero-wash');
+        if(wash) wash.style.opacity = `${0.6 - p*0.6}`;
+      }
+    });
+
+    // render loop — direct mapping for ultra responsive scrub (no double lag)
     let last = performance.now();
-    function render(){
+    function frame(){
       const now = performance.now();
       const dt = Math.min(33, now-last)/16.666;
       last = now;
-      const ease = 0.085;
-      smoothProgress += (targetProgress - smoothProgress) * (1 - Math.pow(1 - ease, dt));
-      smoothProgress = Math.max(0, Math.min(1, smoothProgress));
-      const p = smoothProgress;
 
-      const targetTime = p * videoDuration;
-      const tEase = 0.20;
-      currentTimeSmoothed += (targetTime - currentTimeSmoothed) * (1 - Math.pow(1 - tEase, dt));
+      // ease only a little for smoothness, but very responsive (0.22)
+      const ease = 0.22;
+      smoothP += (targetP - smoothP) * (1 - Math.pow(1 - ease, dt));
+      smoothP = Math.max(0, Math.min(1, smoothP));
 
-      if(video && videoFullyLoaded){
-        if(video.readyState >=1){
-          const diff = Math.abs(video.currentTime - currentTimeSmoothed);
-          if(diff > 0.35 && 'fastSeek' in video && heroVisible){
-            try{ video.fastSeek(currentTimeSmoothed); }catch{ video.currentTime = currentTimeSmoothed; }
-          }else if(diff>0.002){
-            video.currentTime = currentTimeSmoothed;
+      // direct video time — no second smoothing layer, so it feels 1:1 with scroll and reversible instantly
+      vidTime = smoothP * videoDuration;
+
+      if(video && fullyLoaded && video.readyState>=1){
+        const diff = Math.abs(video.currentTime - vidTime);
+        if(diff > 0.001){
+          // direct assignment for perfect Apple-like scrub; fastSeek for large jumps
+          if(diff>0.4 && 'fastSeek' in video){
+            try{ video.fastSeek(vidTime); }catch{ video.currentTime = vidTime; }
+          } else {
+            video.currentTime = vidTime;
           }
         }
-        if(!video.paused) try{ video.pause(); }catch{}
-        if(!heroVisible){
-          try{ if(Math.abs(video.currentTime-(videoDuration-0.01))>0.02) video.currentTime=videoDuration-0.01; }catch{}
-        }
+        if(!video.paused){ try{ video.pause(); }catch{} }
       }
 
-      syncHero(p);
-      requestAnimationFrame(render);
+      syncUI(smoothP);
+      requestAnimationFrame(frame);
     }
-    render();
+    frame();
     reveals();
   }
 
-  function syncHero(p){
+  function syncUI(p){
     const clamp = (v,a=0,b=1)=>Math.max(a,Math.min(b,v));
     const map = (a,b)=>clamp((p-a)/(b-a));
     const get = id=>document.getElementById(id);
 
     const l1=get('h-l1'), l2=get('h-l2'), l3=get('h-l3');
-    const eyebrow=get('h-eyebrow'), kicker=get('h-kicker'), copy=get('h-copy'), cta=get('h-cta'), meta=get('h-meta'), scroll=get('h-scroll');
+    if(l1){ const m=map(0,0.30); gsap.set(l1,{ y:-m*80, scale:1-m*0.07, opacity:1-m, filter:`blur(${m*5}px)` }); }
+    if(l2){ const m=map(0.10,0.48); gsap.set(l2,{ y:-m*100, scale:1-m*0.08, opacity:1-m, filter:`blur(${m*7}px)` }); }
+    if(l3){ const m=map(0.20,0.60); gsap.set(l3,{ y:-m*120, x:-m*16, scale:1-m*0.05, opacity:1-m, rotation:-m*1.2, filter:`blur(${m*5}px)` }); }
 
-    if(l1){ const m=map(0,0.32); gsap.set(l1,{ y:-m*90, scale:1-m*0.08, opacity:1-m, filter:`blur(${m*6}px)` }); }
-    if(l2){ const m=map(0.12,0.50); gsap.set(l2,{ y:-m*110, scale:1-m*0.09, opacity:1-m, filter:`blur(${m*8}px)` }); }
-    if(l3){ const m=map(0.22,0.62); gsap.set(l3,{ y:-m*130, x:-m*18, scale:1-m*0.06, opacity:1-m, rotation:-m*1.4, filter:`blur(${m*6}px)` }); }
-    if(eyebrow) gsap.set(eyebrow,{ opacity:1-map(0,0.22)*1.2, y:-map(0,0.22)*20 });
-    if(kicker) gsap.set(kicker,{ opacity:1-map(0.02,0.28), y:-map(0.02,0.28)*16 });
-    if(copy) gsap.set(copy,{ opacity:1-map(0.35,0.68), y:-map(0.35,0.68)*40 });
+    const eyeb=get('h-eyebrow'), kick=get('h-kicker'), copy=get('h-copy'), cta=get('h-cta'), meta=get('h-meta'), scr=get('h-scroll');
+    if(eyeb) gsap.set(eyeb,{ opacity:1-map(0,0.20)*1.2, y:-map(0,0.20)*18 });
+    if(kick) gsap.set(kick,{ opacity:1-map(0.02,0.26), y:-map(0.02,0.26)*14 });
+    if(copy) gsap.set(copy,{ opacity:1-map(0.33,0.66), y:-map(0.33,0.66)*36 });
     if(cta){
-      const m=map(0.42,0.72);
-      gsap.set(cta,{ opacity:1-m, y:-m*32, scale:1-m*0.04, filter:`blur(${m*4}px)` });
-      const ref=cta.querySelector('.cta-reflect'); if(ref) ref.style.transform=`translateX(${-80+p*160}%) skewX(-18deg)`;
+      const m=map(0.40,0.70);
+      gsap.set(cta,{ opacity:1-m, y:-m*28, scale:1-m*0.04, filter:`blur(${m*3}px)` });
+      const r=cta.querySelector('.cta-reflect'); if(r) r.style.transform=`translateX(${-80+p*160}%) skewX(-18deg)`;
     }
-    if(meta) gsap.set(meta,{ opacity:1-map(0.5,0.78), y:-map(0.5,0.78)*30 });
-    if(scroll) gsap.set(scroll,{ opacity:1-map(0,0.20)*2 });
+    if(meta) gsap.set(meta,{ opacity:1-map(0.48,0.76), y:-map(0.48,0.76)*26 });
+    if(scr) gsap.set(scr,{ opacity:1-map(0,0.18)*2 });
 
+    // video scale/brightness evolves with timeline
     if(video){
-      const sc=1.06+p*0.12, bright=0.95-p*0.14, sat=1.05+p*0.14, bl=p>0.92?(p-0.92)*16:0;
-      gsap.set(video,{ scale:sc, filter:`contrast(1.05) brightness(${bright}) saturate(${sat}) blur(${bl}px)` });
+      const sc=1.06+p*0.10, br=0.96-p*0.12, sat=1.05+p*0.12;
+      // only apply if not being faded by story trigger (story trigger controls opacity)
+      const currentOp = parseFloat(video.style.opacity)||1;
+      if(currentOp>0.3){
+        gsap.set(video,{ scale:sc, filter:`contrast(1.05) brightness(${br}) saturate(${sat})` });
+      }
     }
-    if(grain) grain.style.opacity=(0.032+p*0.06).toFixed(3);
-    if(p>0.72) nav.classList.add('compressed'); else nav.classList.remove('compressed');
+    if(grain) grain.style.opacity=(0.032+p*0.055).toFixed(3);
+    if(p>0.70) nav.classList.add('compressed'); else nav.classList.remove('compressed');
 
-    const metaP=get('meta-progress'), metaT=get('meta-time'), metaTemp=get('meta-temp');
+    const metaP=get('meta-progress'), metaT=get('meta-time'), metaTmp=get('meta-temp');
     if(metaP) metaP.textContent=`${(p*100).toFixed(1).padStart(4,'0')}%`;
-    if(metaT) metaT.textContent=`${currentTimeSmoothed.toFixed(1).padStart(3,'0')}s / ${videoDuration.toFixed(1)}s`;
-    if(metaTemp){ const t=187+p*17; metaTemp.textContent=`187°C → ${t.toFixed(0)}°C`; }
+    if(metaT) metaT.textContent=`${vidTime.toFixed(1).padStart(3,'0')}s / ${videoDuration.toFixed(1)}s`;
+    if(metaTmp){ const t=187+p*17; metaTmp.textContent=`187°C → ${t.toFixed(0)}°C`; }
 
-    const wash=document.getElementById('hero-wash'); if(wash) wash.style.opacity=`${1-p}`;
-    document.querySelectorAll('.drink-glass-reflect').forEach((el,i)=>{ el.style.transform=`translateX(${-30+p*60+Math.sin(p*3+i)*7}%)`; });
+    document.querySelectorAll('.drink-glass-reflect').forEach((el,i)=>{ el.style.transform=`translateX(${-30+p*60+Math.sin(p*3+i)*6}%)`; });
   }
 
   function reveals(){
-    const items=gsap.utils.toArray('.content-section .eyeline, .display, .lead, .story-right p, .section-desc, .drink-card, .col-card, .rp, .machine-frame, .g-item, .journal-card, .contact-grid > *');
-    items.forEach(el=>{ gsap.fromTo(el,{y:44,opacity:0},{y:0,opacity:1,duration:1.05,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',once:true}}); });
+    gsap.utils.toArray('.content-section .eyeline, .display, .lead, .story-right p, .section-desc, .drink-card, .col-card, .rp, .machine-frame, .g-item, .journal-card, .contact-grid > *')
+      .forEach(el=>{ gsap.fromTo(el,{y:40,opacity:0},{y:0,opacity:1,duration:0.95,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%',once:true}}); });
     document.querySelectorAll('[data-tilt]').forEach(card=>{
-      card.addEventListener('mousemove',(e)=>{ const r=card.getBoundingClientRect(); const dx=(e.clientX-(r.left+r.width/2))/r.width; const dy=(e.clientY-(r.top+r.height/2))/r.height; gsap.to(card,{rotationY:dx*9,rotationX:-dy*9,transformPerspective:1000,duration:0.8,ease:'power3.out'}); });
-      card.addEventListener('mouseleave',()=>{ gsap.to(card,{rotationY:0,rotationX:0,duration:1,ease:'elastic.out(1,0.45)'}); });
+      card.addEventListener('mousemove',(e)=>{ const r=card.getBoundingClientRect(); const dx=(e.clientX-(r.left+r.width/2))/r.width; const dy=(e.clientY-(r.top+r.height/2))/r.height; gsap.to(card,{rotationY:dx*8,rotationX:-dy*8,transformPerspective:1000,duration:0.7,ease:'power3.out'}); });
+      card.addEventListener('mouseleave',()=>{ gsap.to(card,{rotationY:0,rotationX:0,duration:0.9,ease:'elastic.out(1,0.45)'}); });
     });
   }
 
   document.querySelectorAll('a[href^=\"#\"]').forEach(a=>{
-    a.addEventListener('click',(e)=>{ const id=a.getAttribute('href'); if(id.length>1){ const t=document.querySelector(id); if(t){ e.preventDefault(); if(lenis && loaderDone) lenis.scrollTo(t,{offset:-56,duration:1.3}); else t.scrollIntoView({behavior:'smooth'}); } } });
+    a.addEventListener('click',(e)=>{ const id=a.getAttribute('href'); if(id.length>1){ const t=document.querySelector(id); if(t){ e.preventDefault(); if(lenis) lenis.scrollTo(t,{offset:-56,duration:1.2}); else t.scrollIntoView({behavior:'smooth'}); } } });
   });
 
-  initScroll();
-  let rt; window.addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(()=>ScrollTrigger.refresh(),200); });
+  initScrub();
+  addEventListener('resize',()=>{ clearTimeout(window._rt); window._rt=setTimeout(()=>ScrollTrigger.refresh(),180); });
 
-  window.__emberDebug = () => ({ targetProgress, smoothProgress, currentTimeSmoothed, videoDuration, fullyLoaded:videoFullyLoaded, loaderDone, readyState:video?.readyState, buffered: video?.buffered?.length? video.buffered.end(video.buffered.length-1):0, src:video?.currentSrc });
+  window.__emberDebug = ()=>({ target:targetP, smooth:smoothP, vidTime, dur:videoDuration, loaded:fullyLoaded, done:loaderDone, rs:video?.readyState, src:video?.currentSrc?.slice(-70) });
 });
